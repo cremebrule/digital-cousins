@@ -1,0 +1,7 @@
+torch
+torchvision
+xformers
+shapely
+open3d
+Pillow
+fpsample
