@@ -8,9 +8,9 @@
 </div>
 
 
-### [Project Page](https://digital-cousins.github.io/) | [Paper](https://openreview.net/forum?id=7c5rAY8oU3&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3Drobot-learning.org%2FCoRL%2F2024%2FConference%2FAuthors%23your-submissions))
+### [Project Page](https://digital-cousins.github.io/) | [Paper](https://arxiv.org/pdf/2410.07408)
 
-This repository contains the codebase used in [**ACDC: Automated Creation of Digital Cousins for Robust Policy Learning**](https://digital-cousins.github.io/).
+This repository contains the codebase used in [**Automated Creation of _Digital Cousins_ for Robust Policy Learning**](https://digital-cousins.github.io/).
 
 More generally, this codebase is designed to generate fully interactive scenes from a single RGB image in a completely automated fashion.
 
@@ -183,7 +183,7 @@ Usage is straightforward, simply run our ACDC pipeline on any input image you'd 
 python digital_cousins/pipeline/acdc.py --input_path <INPUT_IMG_PATH> [--config <CONFIG>] [--gpt_api_key <KEY>]
 ```
 - `--input_path` specifies the path to the input RGB image ot use
-- `--config` (optional) specifies the path to the config to use. If not set, will use the default config at [`acdc/configs/default.yaml`](https://github.com/cremebrule/acdc/blob/main/acdc/configs/default.yaml)
+- `--config` (optional) specifies the path to the config to use. If not set, will use the default config at [`digital_cousins/configs/default.yaml`](https://github.com/cremebrule/acdc/blob/main/acdc/configs/default.yaml)
 - `--gpt_api_key` (optional) specifies the GPT API key to use for GPT queries. If not set, this must be set in the loaded config
 
 By default, this will generate all outputs to a directory named `acdc_outputs` in the same directory as `<INPUT_IMG_PATH>`.
@@ -227,6 +227,9 @@ python examples/4_evaluate_policy.py --agent training_results/cousin_ckpt.pth --
 ```
 Digital cousin-trained policies can often perform similarly to its equivalent digital twin policy on the exact twin asset despite not being trained on that specific setup. In held-out cousin setups unseen by both the digital twin and digital cousin policies, we find that the performance disparity sharply increases. While policies trained on digital cousins exhibit more robust performance across these setups, the digital twin policy exhibits significant degradation. This suggests that digital cousins can improve policy robustness to setups that are unseen but still within the distribution of cousins that the policy was trained on.
 
+### Full Pipeline Examples
+We provide a full suite of examples showcasing our end-to-end pipeline, including scene generation, automated demo collection, and policy training / evaluation. The examples are listed and ordered under the [`examples`](https://github.com/cremebrule/digital-cousins/tree/main/examples) directory.
+
 ### User Tips and Limitations
 
 1. High-quality digital cousin selection requires sufficient assets in the corresponding category in BEHAVIOR. If the number of available assets under a certain category is limited, the result would be sub-optimal. For example, the current BEHAVIOR dataset has only one pot asset, one toaster asset, and two coffee maker assets. In this case, we suggest collecting a smaller number of digital cousins to ensure the collected digital cousins belong to the same category as the target objects.
@@ -246,10 +249,10 @@ Digital cousin-trained policies can often perform similarly to its equivalent di
 8. We assume that assets within semantically similar categories share the same default orientation. For instance, wardrobes, bottom cabinets, and top cabinets should have doors or drawers that open along the local x-axis in their default orientation. However, some assets in the current BEHAVIOR dataset do not adhere to this assumption, potentially leading to incorrect orientations of digital cousins during policy training. Based on our knowledge, the BEHAVIOR team plans to release an updated dataset that resolves this issue, and we will update our dataset accordingly once it is available.
 
 ## Citation
-Please cite [**ACDC**](https://digital-cousins.github.io/) if you use this framework in your publications:
+Please cite [**_Digital Cousins_**](https://digital-cousins.github.io/) if you use this framework in your publications:
 ```bibtex
 @inproceedings{dai2024acdc,
-  title={ACDC: Automated Creation of Digital Cousins for Robust Policy Learning},
+  title={Automated Creation of Digital Cousins for Robust Policy Learning},
   author={Tianyuan Dai and Josiah Wong and Yunfan Jiang and Chen Wang and Cem Gokmen and Ruohan Zhang and Jiajun Wu and Li Fei-Fei},
   booktitle={Conference on Robot Learning (CoRL)},
   year={2024}
