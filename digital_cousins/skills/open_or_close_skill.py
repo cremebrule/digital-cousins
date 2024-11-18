@@ -208,7 +208,7 @@ class OpenOrCloseSkill(ManipulationSkill):
         self._default_obj_to_grasp_pos = grasp_pos_canonical_rotated - obj_pos_offset
 
         # Reset the cabinet to be "normal" facing, and visualize the cabinet again
-        self._target_obj.set_orientation(th.tensor([0, 0, 0, 1.0], dtype=th.float))
+        self._target_obj.set_position_orientation(orientation=th.tensor([0, 0, 0, 1.0], dtype=th.float))
 
         # Compute the pose of the joint in the cabinet base frame
         parent_link = self._target_obj.links[joint.body0.split("/")[-1]]
@@ -602,7 +602,7 @@ class OpenOrCloseSkill(ManipulationSkill):
             cur_target_orientation = OT.quat2mat(OT.axisangle2quat(cur_target_aa))
             if pos_in_robot_frame:
                 cur_target_pos, _ = self.get_pose_in_world_frame(pos=cur_target_pos, mat=cur_target_orientation, return_mat=False)
-            self._progress_traj_markers[marker_name].set_position(cur_target_pos)
+            self._progress_traj_markers[marker_name].set_position_orientation(position=cur_target_pos)
 
     def generate_no_ops(self, n_steps, return_aa=False):
         """

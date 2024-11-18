@@ -229,7 +229,7 @@ class OpenCabinetWrapper(SkillWrapper):
                 enumerate(zip(cab_categories, cab_models, cab_links, self._default_cab_bboxs, self._randomize_textures)):
             with og.sim.stopped():
                 # Move robot out of the scene and place cab at origin
-                self.robot.set_position(th.ones(3) * 50.0)
+                self.robot.set_position_orientation(position=th.ones(3) * 50.0)
 
                 # Skip the object loading if it is the original target object (i.e.: model)
                 cab = DatasetObject(
