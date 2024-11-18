@@ -1,0 +1,6 @@
+assets/
+checkpoints/
+deps/
+training_results/
+*.egg-info/
+__pycache__/
