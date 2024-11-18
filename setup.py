@@ -11,9 +11,9 @@ setup(
     eager_resources=['*'],
     include_package_data=True,
     python_requires='>=3.10',
-    description="ACDC: Automated Creation of Digital Cousins for Robust Policy Learning",
-    author="Tianyuan Dai, Josiah Wong, Yunfan Jiang, Chen Wang, Cem Gokmen, Ruohan Zhang, Jiajun Wu, Li Fei-Fei",
-    url="https://github.com/cremebrule/acdc",
+    description="Automated Creation of Digital Cousins for Robust Policy Learning",
+    author="Tianyuan Dai*, Josiah Wong*, Yunfan Jiang, Chen Wang, Cem Gokmen, Ruohan Zhang, Jiajun Wu, Li Fei-Fei",
+    url="https://github.com/cremebrule/digital-cousins",
     author_email="jdwong@stanford.edu",
     version="0.0.1",
 )
