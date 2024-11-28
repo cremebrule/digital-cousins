@@ -1,6 +1,6 @@
 import requests
 import base64
-
+import time
 
 class GPT:
     """
@@ -16,15 +16,18 @@ class GPT:
             self,
             api_key,
             version="4o",
+            max_retries=3,
     ):
         """
         Args:
             api_key (str): Key to use for querying GPT
             version (str): GPT version to use. Valid options are: {4o, 4o-mini, 4v}
+            max_retries (int): The maximum number of retries to prompt GPT when receiving server error
         """
         self.api_key = api_key
         assert version in self.VERSIONS, f"Got invalid GPT version! Valid options are: {self.VERSIONS}, got: {version}"
         self.version = version
+        self.max_retries = max_retries
 
     def __call__(self, payload, verbose=False):
         """
@@ -38,18 +41,34 @@ class GPT:
         Returns:
             None or str: Raw outputted GPT response if valid, else None
         """
-        if verbose:
-            print(f"Querying GPT-{self.version} API...")
 
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=self.query_header, json=payload)
-        if "choices" not in response.json().keys():
-            print(f"Got error while querying GPT-{self.version} API! Response:\n\n{response.json()}")
-            return None
+        attempts = 0
+        while attempts < self.max_retries:
+            try:
+                if verbose:
+                    print(f"Querying GPT-{self.version} API...")
 
-        if verbose:
-            print(f"Finished querying GPT-{self.version}.")
+                response = requests.post("https://api.openai.com/v1/chat/completions", headers=self.query_header, json=payload)
+                response.raise_for_status()  # Raise an error for HTTP error responses
+                response_data = response.json()
 
-        return response.json()["choices"][0]["message"]["content"]
+                if "choices" not in response_data.keys():
+                    raise ValueError(f"Got error while querying GPT-{self.version} API! Response:\n\n{response.json()}")
+
+                if verbose:
+                    print(f"Finished querying GPT-{self.version}.")
+                
+                return response_data["choices"][0]["message"]["content"]
+            
+            except Exception as e:
+                attempts += 1
+                print(f"Error querying GPT-{self.version} API: {e}")
+                if attempts < self.max_retries:
+                    print(f"Retrying in 5 seconds...")
+                    time.sleep(5)
+                else:
+                    print(f"Failed to query GPT-{self.version} API after {self.max_retries} attempts.")
+                    return None
 
     @property
     def query_header(self):
