@@ -11,7 +11,7 @@ python 4_evaluate_policy.py \
 --n_rollouts 100 \
 --seed 1
 
-# To change aggresiveness of randomization during evaluation, you can pass the following optional argument:
+# To change aggressiveness of randomization during evaluation, you can pass the following optional argument:
 --eval_bbox_rand 0.25,0.25,0.25
 --eval_xyz_rand 0.03,0.03,0.07
 --eval_z_rot_rand 0.314
