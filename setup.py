@@ -14,6 +14,6 @@ setup(
     description="Automated Creation of Digital Cousins for Robust Policy Learning",
     author="Tianyuan Dai*, Josiah Wong*, Yunfan Jiang, Chen Wang, Cem Gokmen, Ruohan Zhang, Jiajun Wu, Li Fei-Fei",
     url="https://github.com/cremebrule/digital-cousins",
-    author_email="jdwong@stanford.edu",
+    author_email="tydai@stanford.edu, jdwong@stanford.edu",
     version="0.0.1",
 )

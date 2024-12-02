@@ -105,7 +105,7 @@ conda activate acdc
     - [Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2)
    
         ```bash
-        git clone https://github.com/DepthAnything/Depth-Anything-V2.git && cd DepthAnything-V2
+        git clone https://github.com/DepthAnything/Depth-Anything-V2.git && cd Depth-Anything-V2
         pip install -r requirements.txt
         conda-develop . && cd ..
         ```
@@ -247,6 +247,8 @@ We provide a full suite of examples showcasing our end-to-end pipeline, includin
 7. If step 2 of ACDC is killed by OpenAI server error, or low RAM, users can resume collecting digital cousins by setting `FeatureMatcher.pipeline.DigitalCousinMatcher.start_at_name` to the object name where the process is killed. See `tests/test_models.py` for examples of running only step 2 and step 3 of ACDC.
 
 8. We assume that assets within semantically similar categories share the same default orientation. For instance, wardrobes, bottom cabinets, and top cabinets should have doors or drawers that open along the local x-axis in their default orientation. However, some assets in the current BEHAVIOR dataset do not adhere to this assumption, potentially leading to incorrect orientations of digital cousins during policy training. Based on our knowledge, the BEHAVIOR team plans to release an updated dataset that resolves this issue, and we will update our dataset accordingly once it is available.
+
+9. If you encounter torch installation error, like `ImportError: /scr/tydai/miniforge3/envs/acdc/lib/python3.10/site-packages/torch/lib/../../nvidia/cusparse/lib/libcusparse.so.12: undefined symbol: __nvJitLinkComplete_12_4, version libnvJitLink.so.12`, consider trying [this solution](https://github.com/pytorch/pytorch/issues/111469#:~:text=dev%20preview%3A-,python%20%2Dm%20pip%20uninstall%20torch%20torchvision%20torchaudio%0Apython%20%2Dm%20pip%20install%20%2D%2Dpre%20torch%20torchvision%20torchaudio%20%2D%2Dindex%2Durl%20https%3A//download.pytorch.org/whl/nightly/cu121,-104).
 
 ## Citation
 Please cite [**_Digital Cousins_**](https://digital-cousins.github.io/) if you use this framework in your publications:

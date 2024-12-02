@@ -10,6 +10,11 @@ python 4_evaluate_policy.py \
 --eval_category_model_link_name bottom_cabinet,dajebq,link_3 \
 --n_rollouts 100 \
 --seed 1
+
+# To change aggressiveness of randomization during evaluation, you can pass the following optional argument:
+--eval_bbox_rand 0.25,0.25,0.25
+--eval_xyz_rand 0.03,0.03,0.07
+--eval_z_rot_rand 0.314
 """
 
 
@@ -226,13 +231,27 @@ def run_trained_agent(args):
         # read horizon from config
         rollout_horizon = config.experiment.rollout.horizon
 
+    eval_idx = ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['eval_idx']
+
     # Set target object to rollout policy
     if args.eval_category_model_link_name not in {None, "None", "none", ""}:
         eval_category, eval_model, eval_link = args.eval_category_model_link_name.split(",")
-        ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['cab_categories'][-1] = eval_category
-        ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['cab_models'][-1] = eval_model
+        ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['cab_categories'][eval_idx] = eval_category
+        ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['cab_models'][eval_idx] = eval_model
         if eval_link != "":
-            ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['cab_links'][-1] = eval_link
+            ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['cab_links'][eval_idx] = eval_link
+    
+    # Change randomization parameters during evaluation
+    if args.eval_bbox_rand not in {None, "None", "none", ""}:
+        bbox_rand = [float(_rand) for _rand in args.eval_bbox_rand.split(',')]
+        ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['bbox_randomization'][eval_idx] = bbox_rand
+
+    if args.eval_xyz_rand not in {None, "None", "none", ""}:
+        xyz_rand = [float(_rand) for _rand in args.eval_xyz_rand.split(',')]
+        ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['xyz_randomization'] = xyz_rand
+
+    if args.eval_z_rot_rand not in {None, "None", "none", ""}:
+        ckpt_dict["env_metadata"]['env_kwargs']['og_config']['wrapper']['z_rot_randomization'] = args.eval_z_rot_rand
 
     # HACK: assume absolute actions for now if using diffusion policy on real robot
     if (algo_name == "diffusion_policy") and EnvUtils.is_real_robot_gprs_env(env_meta=ckpt_dict["env_metadata"]):
@@ -388,11 +407,36 @@ if __name__ == "__main__":
         help="number of rollouts",
     )
 
+    # category, model, and link of the target asset that the policy will be evaluated on
     parser.add_argument(
         "--eval_category_model_link_name",
         type=str,
         default=None,
         help="(optional) comma-delimited category,model,link to evaluate on (for cabinet open task)",
+    )
+
+    # bounding box randomization along xyz axis during evaluation (in percentage)
+    parser.add_argument(
+        "--eval_bbox_rand",
+        type=str,
+        default=None,
+        help="(optional) comma-delimited bounding box randomization during evaluation",
+    )
+
+    # position randomization along xyz axis during evaluation (in meter)
+    parser.add_argument(
+        "--eval_xyz_rand",
+        type=str,
+        default=None,
+        help="(optional) comma-delimited xyz position randomization during evaluation",
+    )
+
+    # rotation randomization around local z-axis during evaluation (in radiance)
+    parser.add_argument(
+        "--eval_z_rot_rand",
+        type=float,
+        default=None,
+        help="(optional) z-axis rotation randomization during evaluation in radiance",
     )
 
     # maximum horizon of rollout, to override the one stored in the model checkpoint
