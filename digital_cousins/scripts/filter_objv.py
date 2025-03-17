@@ -7,6 +7,7 @@ import click
 import os
 import glob
 import cv2
+import json
 import shutil
 from digital_cousins.models.feature_matcher import FeatureMatcher
 from groundingdino.util.inference import load_image, annotate
@@ -229,7 +230,7 @@ def capture_isometric_views(obj_path):
     texture = None
     if texture_path:
         try:
-            texture = pyvista.read_texture(texture_path)
+            texture = pyvista.read_texture(str(texture_path))
         except Exception as e:
             print(f"Warning: Failed to load texture {texture_path}: {e}")
     # Load the mesh
@@ -250,11 +251,20 @@ def capture_isometric_views(obj_path):
         plotter = pyvista.Plotter(off_screen=True, window_size=(1024, 1024))
         plotter.background_color = 'white'
         # Add mesh with texture if available
-        if texture:
-            plotter.add_mesh(mesh, texture=texture, show_edges=False)
-        else:
-            plotter.add_mesh(mesh, show_edges=False)
-        
+        try:
+            if texture:
+                plotter.add_mesh(mesh, texture=texture, show_edges=False)
+            else:
+                plotter.add_mesh(mesh, show_edges=False)
+        except Exception as e:
+            print(f"Warning: Failed to add mesh with texture: {e}")
+            # Fallback to adding mesh without texture
+            try:
+                plotter.add_mesh(mesh, show_edges=False)
+            except Exception as e2:
+                print(f"Critical error: Failed to add mesh without texture: {e2}")
+                continue
+            
         # Normalize position vector and set camera distance
         position = np.array(position, dtype=float)
         position = position / np.linalg.norm(position) * camera_distance
@@ -406,16 +416,31 @@ def check_mesh_category_light(image_paths, text_prompts, threshold, obj_path):
                 # Use the highest logit as the confidence score
                 current_score = max(logits)
                 if current_score >= threshold:
-                    # Removes images and .obj file
-                    img_path = pathlib.Path(image_paths[0])
-                    shutil.rmtree(img_path.parent)  
-                    os.remove(obj_path)
+                    # # Removes images and .obj file
+                    # img_path = pathlib.Path(image_paths[0])
+                    # grandparent_dir = img_path.parent.parent  # Parent directory to keep
+                    
+                    # # Delete all files in the grandparent directory
+                    # for item in grandparent_dir.glob('*'):
+                    #     if item.is_file():
+                    #         item.unlink()  # Delete files
+                    #     elif item.is_dir():
+                    #         shutil.rmtree(item)  # Delete subdirectories
+                    
                     return True, prompt
-    # Remove images and .obj file       
-    img_path = pathlib.Path(image_paths[0])
-    shutil.rmtree(img_path.parent)
-    os.remove(obj_path)                 
-    return False, None               
+                
+    # # Delete all files in the grandparent directory
+    # img_path = pathlib.Path(image_paths[0])
+    # grandparent_dir = img_path.parent.parent  # Parent directory to keep
+    
+    # # Delete all files in the grandparent directory
+    # for item in grandparent_dir.glob('*'):
+    #     if item.is_file():
+    #         item.unlink()  # Delete files
+    #     elif item.is_dir():
+    #         shutil.rmtree(item)  # Delete subdirectories
+            
+    return False, None             
     
 @click.command()
 @click.option('--asset-path', required=True, help='Path to the 3D model file (.obj, .glb, .gltf, .dae)')
@@ -444,13 +469,13 @@ def filter_mesh(asset_path, text_prompts, light_mode):
             # Check if the mesh matches any of the categories
             is_match, matched_category = check_mesh_category(image_paths, prompt_list, threshold = 0.85)
             
-        # Print result
+        # # Print result
         result = {
             "is_match": is_match,
             "matched_category": matched_category
         }
-        print(result)
-            
+        print(result) 
+    
         return result
     
     except Exception as e:

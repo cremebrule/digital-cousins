@@ -363,10 +363,31 @@ def delete_repo(path: str):
             
     elif SOURCE == "sketchfab":
         try:
-            os.remove(path)
-            print(f"Successfully removed {path}")
-        except FileNotFoundError:
-            print(f"File not found: {path}")
+            # Get the directory containing the input file
+            parent_dir = os.path.dirname(path)
+            
+            if not os.path.exists(parent_dir):
+                print(f"Directory not found: {parent_dir}")
+                return
+                
+            # Delete all files and subdirectories in the parent directory
+            for item in os.listdir(parent_dir):
+                item_path = os.path.join(parent_dir, item)
+                
+                try:
+                    if os.path.isfile(item_path):
+                        os.remove(item_path)
+                        print(f"Deleted file: {item_path}")
+                    elif os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+                        print(f"Deleted directory: {item_path}")
+                except Exception as e:
+                    print(f"Error deleting {item_path}: {str(e)}")
+                    
+            print(f"Successfully cleaned directory: {parent_dir}")
+            
+        except Exception as e:
+            print(f"Error cleaning directory: {str(e)}")
         
 
 @click.command()
@@ -461,7 +482,7 @@ def main(target_format: str, sample_size: int, batch_size: int, get_all:bool, he
                         # Extract the result dictionary from the output
                         # Get the last non-empty line
                         last_line = [line.strip() for line in result.stdout.split('\n') if line.strip()][-1]
-                        
+                        print(f"last_line = {last_line}")
                         # Parse the Python dictionary
                         result_dict = ast.literal_eval(last_line)
                         
@@ -522,7 +543,7 @@ def main(target_format: str, sample_size: int, batch_size: int, get_all:bool, he
                         )
                 else:
                     print(f"Could not find file path for {row['file_identifier']}")
-            
+   
             print(f"Completed batch {batch_num + 1}")
             # Delete the repository after successful processing
             for repo_path in current_repo_path:
