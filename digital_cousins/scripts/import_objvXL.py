@@ -1,6 +1,7 @@
 import os
 import objaverse
 import objaverse.xl as oxl
+from objaverse.xl.sketchfab import SketchfabDownloader
 import pandas as pd
 import shutil
 import random
@@ -24,7 +25,7 @@ DOWNLOAD_BATCH_SIZE = 1  # Number of files to download in each batch
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 DOWNLOAD_TIMEOUT = 300  # 5 minutes timeout for downloads
-SEMANTIC_DICT = "closet,cabinet,drawer,refrigerator,oven,microwave,table"
+SEMANTIC_DICT = ["microwave", "closet", "cabinet", "fridge", "refrigerator", "oven"]
 
 # # Disable swap temporarily
 # sudo swapoff -a
@@ -272,6 +273,108 @@ def filter_annotations(annotations: pd.DataFrame, target_format: str) -> pd.Data
     filtered = annotations[mask]
     return filtered
 
+def filter_annotations_by_keywords(annotations, uids, semantic_keywords):
+    """
+    Filter annotations that contain any of the specified keywords and create
+    a mapping from each keyword to its matching file identifiers.
+    
+    Args:
+        annotations (dict): Dictionary mapping UIDs to annotation metadata
+        uids (list): List of UIDs to check
+        semantic_keywords (list): List of keywords to search for
+        
+    Returns:
+        dict: Dictionary where each key is a keyword and value is a list of matching file identifiers
+        list: Combined list of all file identifiers that matched any keyword
+    """
+    
+    # Initialize dictionary to store keyword -> list of matching file identifiers
+    keyword_to_file_identifiers = {keyword: [] for keyword in semantic_keywords}
+    all_filtered_file_identifiers = set()  # Using a set to avoid duplicates
+    
+    for uid in uids:
+        annotation = annotations.get(uid)
+        if not annotation:
+            continue
+        
+        # Track which keywords matched this annotation
+        matching_keywords = set()
+        
+        # Check 1: annotation['name']
+        if 'name' in annotation:
+            for keyword in semantic_keywords:
+                if keyword.lower() in annotation['name'].lower():
+                    matching_keywords.add(keyword)
+        
+        # Check 2: annotation['tags'][i]['name']
+        if 'tags' in annotation and annotation['tags']:
+            for tag in annotation['tags']:
+                if isinstance(tag, dict) and 'name' in tag:
+                    for keyword in semantic_keywords:
+                        if keyword.lower() in tag['name'].lower():
+                            matching_keywords.add(keyword)
+        
+        # Check 3: annotation['description'] - treating it as a sentence/paragraph
+        if 'description' in annotation and annotation['description']:
+            description_lower = annotation['description'].lower()
+            for keyword in semantic_keywords:
+                if keyword.lower() in description_lower:
+                    matching_keywords.add(keyword)
+        
+        # Check 4: annotation['categories'][i]['name']
+        if 'categories' in annotation and annotation['categories']:
+            for category in annotation['categories']:
+                if isinstance(category, dict) and 'name' in category:
+                    for keyword in semantic_keywords:
+                        if keyword.lower() in category['name'].lower():
+                            matching_keywords.add(keyword)
+        
+        # If any keywords matched, update the mapping and the combined list
+        if matching_keywords:
+            # Convert UID to file identifier
+            file_identifier = SketchfabDownloader.uid_to_file_identifier(uid)
+            
+            for keyword in matching_keywords:
+                keyword_to_file_identifiers[keyword].append(file_identifier)
+            all_filtered_file_identifiers.add(file_identifier)
+            
+    return keyword_to_file_identifiers, list(all_filtered_file_identifiers)
+
+def process_sketchfab_annotations(download_dir, semantic_dict, get_all=False, sample_size=10):
+    # Get annotations and UIDs
+    annotations_dict = SketchfabDownloader.get_full_annotations(download_dir=download_dir)
+    uids = SketchfabDownloader.get_uids(download_dir=download_dir)
+    print(f"Filtering by keywords: {semantic_dict}")
+
+    # Filter annotations by keywords - now returns file identifiers instead of UIDs
+    keyword_to_file_identifiers, all_filtered_file_identifiers = filter_annotations_by_keywords(annotations_dict, uids, semantic_dict)
+    
+    # Print summary
+    print("\nMatches per keyword:")
+    for keyword, file_ids in keyword_to_file_identifiers.items():
+        print(f"  {keyword}: {len(file_ids)} matches")
+    
+    print(f"\nTotal unique objects matching any keyword: {len(all_filtered_file_identifiers)} out of {len(uids)} total objects")
+    
+    # Create map from file identifier to keyword for later use
+    file_identifier_to_keyword = {}
+    for keyword, file_ids in keyword_to_file_identifiers.items():
+        for file_id in file_ids:
+            if file_id not in file_identifier_to_keyword:
+                file_identifier_to_keyword[file_id] = keyword
+                
+    # Apply sample size limit if specified
+    if not get_all and len(all_filtered_file_identifiers) > sample_size:
+        all_filtered_file_identifiers = all_filtered_file_identifiers[:sample_size]
+        
+    # Get all annotations and filter to only include our matched file identifiers
+    sketchfab_annotations = SketchfabDownloader.get_annotations(download_dir=download_dir)
+    
+    # Then filter this directly
+    filtered_annotations = sketchfab_annotations[sketchfab_annotations['fileIdentifier'].isin(all_filtered_file_identifiers)]
+    
+    return filtered_annotations, file_identifier_to_keyword
+
 def get_file_name(fileIdentifier: str):
     if SOURCE == "github":
         filename = os.path.basename(fileIdentifier)
@@ -426,15 +529,29 @@ def main(target_format: str, sample_size: int, batch_size: int, get_all:bool, he
             
         print(f"Selected source: {SOURCE} for format: {target_format}")
         print("Fetching annotations...")
-        annotations = oxl.get_annotations(download_dir=BASE_DIR)
+
+        if SOURCE == "sketchfab":
+            print("Use sketchfab metadata for semantic filtering")
+
+            filtered_annotations, file_identifier_to_keyword = process_sketchfab_annotations(
+                download_dir = BASE_DIR, 
+                semantic_dict = SEMANTIC_DICT,
+                get_all = get_all,
+                sample_size = sample_size)
+            
+            import gc
+            gc.collect()
+            print(f"Selected {len(filtered_annotations)} objects for processing")
+
+        else:
+            annotations = oxl.get_annotations(download_dir=BASE_DIR)
+            # Filter and sample annotations
+            filtered_annotations = filter_annotations(annotations, target_format)
+            if not get_all:
+                filtered_annotations = filtered_annotations.sample(min(sample_size, len(filtered_annotations)))
         
-        # Filter and sample annotations
-        # filtered_annotations = annotations[annotations['fileType'] == target_format.lower()]
-        filtered_annotations = filter_annotations(annotations, target_format)
-        if not get_all:
-            filtered_annotations = filtered_annotations.sample(min(sample_size, len(filtered_annotations)))
-        print(f"Selected {len(filtered_annotations)} objects for processing")
-        print(f"Source distribution:\n{filtered_annotations['source'].value_counts()}")
+            print(f"Selected {len(filtered_annotations)} objects for processing")
+            print(f"Source distribution:\n{filtered_annotations['source'].value_counts()}")
         
         # Process in batches
         total_batches = (len(filtered_annotations) + batch_size - 1) // batch_size
@@ -473,64 +590,95 @@ def main(target_format: str, sample_size: int, batch_size: int, get_all:bool, he
                 if file_path and os.path.exists(file_path):
                     
                     try:
-                        print("Filtering object based on semantic...")
-
-                        # Filter out the mesh that are not in the list of target
-                        cmd = ["python", "filter_objv.py", "--asset-path", file_path, "--text-prompts", SEMANTIC_DICT, "--light-mode"]
-                        result = subprocess.run(cmd, capture_output=True, text=True)
-
-                        # Extract the result dictionary from the output
-                        # Get the last non-empty line
-                        last_line = [line.strip() for line in result.stdout.split('\n') if line.strip()][-1]
-                        print(f"last_line = {last_line}")
-                        # Parse the Python dictionary
-                        result_dict = ast.literal_eval(last_line)
                         
-                        # Extract values
-                        is_match = result_dict["is_match"]
-                        matched_category = result_dict["matched_category"]
+                    ## Use GroundSAM2 for object semantic identification
+                    #     print("Filtering object based on semantic...")
 
-                        # Now use the values in your code
-                        if is_match:
-                            print(f"✅ Object matches category: {matched_category}")
-                            # Your code for matching objects...
+                    #     # Filter out the mesh that are not in the list of target
+                    #     cmd = ["python", "filter_objv.py", "--asset-path", file_path, "--text-prompts", SEMANTIC_DICT, "--light-mode"]
+                    #     result = subprocess.run(cmd, capture_output=True, text=True)
+
+                    #     # Extract the result dictionary from the output
+                    #     # Get the last non-empty line
+                    #     last_line = [line.strip() for line in result.stdout.split('\n') if line.strip()][-1]
+                    #     print(f"last_line = {last_line}")
+                    #     # Parse the Python dictionary
+                    #     result_dict = ast.literal_eval(last_line)
+                        
+                    #     # Extract values
+                    #     is_match = result_dict["is_match"]
+                    #     matched_category = result_dict["matched_category"]
+
+                    #     # Now use the values in your code
+                    #     if is_match:
+                    #         print(f"✅ Object matches category: {matched_category}")
+                    #         # Your code for matching objects...
                             
-                        else:
-                            print("❌ Object does not match any semantic categories")
+                    #     else:
+                    #         print("❌ Object does not match any semantic categories")
+                    #         download_tracker.update_status(
+                    #             file_identifier=row['file_identifier'],
+                    #             file_format=target_format,
+                    #             local_path=file_path,
+                    #             new_status='filtered',
+                    #             category = None,
+                    #         )
+                    #         continue  # Skip to next object
+
+                        if SOURCE == "sketchfab":
+                            semantic_keyword = file_identifier_to_keyword.get(row['file_identifier'], None)
+                            # Import the object
+                            import_custom_object.callback(
+                                asset_path=file_path,
+                                category=f"objaverse_{semantic_keyword}",
+                                model=row['model_name'],
+                                collision_method="coacd",
+                                hull_count=32,
+                                up_axis="z",
+                                headless=headless,
+                                scale= 1,
+                                check_scale = True,
+                                rescale = True,
+                                overwrite=True,
+                                n_submesh = 20,
+                            )
+                            
+                            # Update status and cleanup
                             download_tracker.update_status(
                                 file_identifier=row['file_identifier'],
                                 file_format=target_format,
                                 local_path=file_path,
-                                new_status='filtered',
-                                category = None,
+                                new_status='converted',
+                                category = semantic_keyword,
                             )
-                            continue  # Skip to next object
+                            print(f" ************** Successfully imported {row['file_identifier']} as {row['model_name']} ****************")
                         
-                        # Import the object
-                        import_custom_object.callback(
-                            asset_path=file_path,
-                            category="objaverse",
-                            model=row['model_name'],
-                            collision_method="coacd",
-                            hull_count=32,
-                            up_axis="z",
-                            headless=headless,
-                            scale= 1,
-                            check_scale = True,
-                            rescale = True,
-                            overwrite=True,
-                            n_submesh = 20,
-                        )
-                        
-                        # Update status and cleanup
-                        download_tracker.update_status(
-                            file_identifier=row['file_identifier'],
-                            file_format=target_format,
-                            local_path=file_path,
-                            new_status='converted',
-                            category = matched_category,
-                        )
-                        print(f" ************** Successfully imported {row['file_identifier']} as {row['model_name']} ****************")
+                        else:   
+                            # Import the object
+                            import_custom_object.callback(
+                                asset_path=file_path,
+                                category="objaverse",
+                                model=row['model_name'],
+                                collision_method="coacd",
+                                hull_count=32,
+                                up_axis="z",
+                                headless=headless,
+                                scale= 1,
+                                check_scale = True,
+                                rescale = True,
+                                overwrite=True,
+                                n_submesh = 20,
+                            )
+                            
+                            # Update status and cleanup
+                            download_tracker.update_status(
+                                file_identifier=row['file_identifier'],
+                                file_format=target_format,
+                                local_path=file_path,
+                                new_status='converted',
+                                category = '',
+                            )
+                            print(f" ************** Successfully imported {row['file_identifier']} as {row['model_name']} ****************")
                         
                     except Exception as e:
                         print(f"Error processing {row['file_identifier']}: {e}")
