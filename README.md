@@ -180,11 +180,13 @@ python tests/test_models.py --gpt_api_key <KEY> --gpt_version 4o
 ### ACDC Pipeline
 Usage is straightforward, simply run our ACDC pipeline on any input image you'd like via our entrypoint:
 ```sh
-python digital_cousins/pipeline/acdc.py --input_path <INPUT_IMG_PATH> [--config <CONFIG>] [--gpt_api_key <KEY>]
+python digital_cousins/pipeline/acdc.py --input_path <INPUT_IMG_PATH> [--config <CONFIG>] [--gpt_api_key <KEY>] [--max_retries <N_RETRIES>] [--retry_wait_time <TIME>]
 ```
 - `--input_path` specifies the path to the input RGB image ot use
 - `--config` (optional) specifies the path to the config to use. If not set, will use the default config at [`digital_cousins/configs/default.yaml`](https://github.com/cremebrule/acdc/blob/main/acdc/configs/default.yaml)
 - `--gpt_api_key` (optional) specifies the GPT API key to use for GPT queries. If not set, this must be set in the loaded config
+- `--max_retries` (optional) specifies the maximum number of attempts when querying GPT. If not set, will fall back to the value in the loaded config
+- `--retry_wait_time` (optional) specifies the number of seconds to wait in between GPT re-queries. If not set, will fall back to the value in the loaded config
 
 By default, this will generate all outputs to a directory named `acdc_outputs` in the same directory as `<INPUT_IMG_PATH>`.
 
