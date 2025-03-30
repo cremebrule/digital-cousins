@@ -69,6 +69,8 @@ class RealWorldExtractor:
             input_path,
             gpt_api_key,
             gpt_version="4o",
+            max_retries=3,
+            retry_wait_time=5,
             captions=None,
             camera_intrinsics_matrix=None,
             depth_max_limit=20.,
@@ -95,6 +97,8 @@ class RealWorldExtractor:
             gpt_api_key (str): Valid GPT-4O compatible API key
             gpt_version (str): GPT version to use. Valid options are {"4o", "4v"}.
                 Default is "4o", which we've found to work empirically better than 4V
+            max_retries (int): The maximum number of retries to prompt GPT when receiving server error
+            retry_wait_time (float): Number of seconds to wait between GPT query retries
             captions (None or list of str): If specified, the list of captions that will be directly passed to
                 GroundedSAM for extracting relevant object masks. If not specified, captions will be generated directly
                 using GPT-4O. Note that if these captions are specified, they should also include the estimated number
@@ -160,7 +164,12 @@ class RealWorldExtractor:
 
         # Create GPT
         assert gpt_api_key is not None, "gpt_api_key must be specified in order to use GPT model!"
-        gpt = GPT(api_key=gpt_api_key, version=gpt_version)
+        gpt = GPT(
+            api_key=gpt_api_key,
+            version=gpt_version,
+            max_retries=max_retries,
+            retry_wait_time=retry_wait_time,
+        )
 
         if self.verbose:
             print(f"Extracting real-world info from image {input_path}...")
