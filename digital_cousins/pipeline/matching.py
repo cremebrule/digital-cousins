@@ -70,6 +70,8 @@ class DigitalCousinMatcher:
             step_1_output_path,
             gpt_api_key,
             gpt_version="4o",
+            max_retries=3,
+            retry_wait_time=5,
             top_k_categories=3,
             top_k_models=8,
             top_k_poses=3,
@@ -92,6 +94,8 @@ class DigitalCousinMatcher:
             gpt_api_key (str): Valid GPT-4O compatible API key
             gpt_version (str): GPT version to use. Valid options are {"4o", "4v"}.
                 Default is "4o", which we've found to work empirically better than 4V
+            max_retries (int): The maximum number of retries to prompt GPT when receiving server error
+            retry_wait_time (float): Number of seconds to wait between GPT query retries
             top_k_categories (int): Number of closest categories from the OmniGibson dataset from which digital
                 cousin candidates will be selected
             top_k_models (int): Number of closest asset digital cousin models from the OmniGibson dataset to select
@@ -213,7 +217,12 @@ class DigitalCousinMatcher:
 
         # Create GPT instance
         assert gpt_api_key is not None, "gpt_api_key must be specified in order to use GPT model!"
-        gpt = GPT(api_key=gpt_api_key, version=gpt_version)
+        gpt = GPT(
+            api_key=gpt_api_key,
+            version=gpt_version,
+            max_retries=max_retries,
+            retry_wait_time=retry_wait_time,
+        )
 
         should_start = start_at_name is None
         n_instances = len(names)
