@@ -17,17 +17,20 @@ class GPT:
             api_key,
             version="4o",
             max_retries=3,
+            retry_wait_time=5,
     ):
         """
         Args:
             api_key (str): Key to use for querying GPT
             version (str): GPT version to use. Valid options are: {4o, 4o-mini, 4v}
             max_retries (int): The maximum number of retries to prompt GPT when receiving server error
+            retry_wait_time (float): Number of seconds to wait between GPT query retries
         """
         self.api_key = api_key
         assert version in self.VERSIONS, f"Got invalid GPT version! Valid options are: {self.VERSIONS}, got: {version}"
         self.version = version
         self.max_retries = max_retries
+        self.retry_wait_time = retry_wait_time
 
     def __call__(self, payload, verbose=False):
         """
@@ -64,8 +67,8 @@ class GPT:
                 attempts += 1
                 print(f"Error querying GPT-{self.version} API: {e}")
                 if attempts < self.max_retries:
-                    print(f"Retrying in 5 seconds...")
-                    time.sleep(5)
+                    print(f"Retrying in {self.retry_wait_time} seconds...")
+                    time.sleep(self.retry_wait_time)
                 else:
                     print(f"Failed to query GPT-{self.version} API after {self.max_retries} attempts.")
                     return None

@@ -42,6 +42,8 @@ class ACDC:
             step_2_output_path=None,
             gpt_api_key=None,
             gpt_version=None,
+            max_retries=None,
+            retry_wait_time=None,
     ):
         """
         Executes ACDC, running the following steps:
@@ -67,6 +69,10 @@ class ACDC:
                 loaded config)
             gpt_version (None or str): If specified, the GPT version to use (will override any value found in the
                 loaded config)
+            max_retries (None or int): If specified, number of retries when querying GPT (will override any value found 
+                in the loaded config)
+            retry_wait_time (None or float): If specified, number of seconds to wait in between re-querying GPT (will 
+                override any value found in the loaded config)
         """
         # Copy config, and potentially overwrite GPT API key
         config = deepcopy(self.config)
@@ -81,6 +87,13 @@ class ACDC:
         if gpt_version is not None:
             config["pipeline"]["RealWorldExtractor"]["call"]["gpt_version"] = gpt_version
             config["pipeline"]["DigitalCousinMatcher"]["call"]["gpt_version"] = gpt_version
+        if max_retries is not None:
+            config["pipeline"]["RealWorldExtractor"]["call"]["max_retries"] = max_retries
+            config["pipeline"]["DigitalCousinMatcher"]["call"]["max_retries"] = max_retries
+        if retry_wait_time is not None:
+            config["pipeline"]["RealWorldExtractor"]["call"]["retry_wait_time"] = retry_wait_time
+            config["pipeline"]["DigitalCousinMatcher"]["call"]["retry_wait_time"] = retry_wait_time
+            
 
         print(f"""
 
@@ -175,6 +188,8 @@ def main(args):
         step_1_output_path=args.step_1_output_path,
         step_2_output_path=args.step_2_output_path,
         gpt_api_key=args.gpt_api_key,
+        max_retries=args.max_retries,
+        retry_wait_time=args.retry_wait_time,
     )
     og.shutdown()
 
@@ -187,6 +202,10 @@ if __name__ == "__main__":
                         help="Absolute path to config file to use. If not specified, will use default.")
     parser.add_argument("--gpt_api_key", type=str, default=None,
                         help="GPT API key to use. If not specified, will use value found from config file.")
+    parser.add_argument("--max_retries", type=int, default=None,
+                        help="Maximum number of retries to attempt when querying GPT. If not specified, will use value found from config file.")
+    parser.add_argument("--retry_wait_time", type=float, default=None,
+                        help="Number of seconds to wait in between retry attempts when querying GPT. If not specified, will use value found from config file.")
     parser.add_argument("--skip_step_1", action="store_true",
                         help="If set, will skip ACDC Step 1 (Real World Extraction)")
     parser.add_argument("--skip_step_2", action="store_true",
